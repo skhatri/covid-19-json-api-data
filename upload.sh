@@ -1,10 +1,9 @@
 #!/bin/bash
 
-: ${TRAVIS_BUILD_NUMBER="0"}
-: ${TRAVIS_EVENT_TYPE="trigger"}
-pwd
-ls -lhtr
-git status -s
+: "${TRAVIS_BUILD_NUMBER=0}"
+: "${TRAVIS_EVENT_TYPE='trigger'}"
+
+git status
 now=$(date "+%Y-%m-%d %H:%M:%S%z")
 changes=$(git status -s|wc -l)
 echo "Time: ${now}, changes: ${changes}"
