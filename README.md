@@ -16,7 +16,8 @@ https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_d
 #1. Download Latest csv files
 bash ./download.sh
 
-#2. Run DatasetExtractor
+#2. Run DatasetExtractor or 
+./gradlew extract 
 ```
 
 ### Api
