@@ -28,5 +28,5 @@ then
   git add dataset
   git commit -m"dataset update run at ${now} build: #${TRAVIS_BUILD_NUMBER}, trigger_type: ${TRAVIS_EVENT_TYPE}"
   git remote add gh https://"${GITHUB_TOKEN}"@github.com/skhatri/covid-19-csv-to-api-data.git/
-  git push origin gh
+  git push gh master
 fi
