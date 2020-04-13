@@ -21,9 +21,10 @@ bash ./download.sh
 The files may be returned as text/plain.
 
 #### List of Countries/Provinces
-```
-curl https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/country.json
-```
+This can be used as menu item for retrieving dataset by country
+
+https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/country.json
+
 #### Confirmed, Recovered, Death Counters
 
 - Confirmed - https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/confirmed.json
