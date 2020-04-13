@@ -21,6 +21,7 @@ case class CovidAggregate(province_state: String, country_region: String, lat: D
 object DatasetExtractor extends App {
 
   val outputDateFormatValue = "'d'_yyyy_MM_dd"
+  val baseUrl = "https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data"
   val sparkSession = SparkSession.builder()
     .appName("data-analyser")
     .master("local[2]")
@@ -149,7 +150,8 @@ object DatasetExtractor extends App {
   val countryIndex = allCounters.map(covAgg => {
     Map("key" -> covAgg.country_province_key,
       "province_state" -> covAgg.province_state,
-      "country_region" -> covAgg.country_region
+      "country_region" -> covAgg.country_region,
+      "_self" -> s"${baseUrl}/by-country/${covAgg.country_province_key}.json"
     )
   })
   saveFile("data/country.json", objectMapper.writeValueAsString(countryIndex))
