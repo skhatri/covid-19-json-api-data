@@ -28,12 +28,10 @@ then
   git add dataset
   git commit -m"dataset update run at ${now} build: #${TRAVIS_BUILD_NUMBER}, trigger_type: ${TRAVIS_EVENT_TYPE}"
   git remote add gh https://"${GITHUB_TOKEN}"@"${GIT_URL}"
+  git branch
   tag_msg='{"time": "'"${now}"'", "build_number": '"${TRAVIS_BUILD_NUMBER}"', "trigger_type": "'"${TRAVIS_EVENT_TYPE}"'", "message": "dataset update"}'
   git tag -a -m"${tag_msg}" build/"${TRAVIS_BUILD_NUMBER}"
-  current=$(git branch --show-current)
-  echo "current branch ${current}"
-  git push gh "${current}":master
-  git push gh --tags
+  git push gh develop:master
 fi
 
 #debug:
