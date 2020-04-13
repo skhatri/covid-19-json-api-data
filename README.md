@@ -1,3 +1,5 @@
+[![Build](https://travis-ci.com/skhatri/covid-19-csv-to-api-data.svg?branch=master)](https://travis-ci.com/skhatri/covid-19-csv-to-api-data.svg?branch=master)
+
 # covid-19-csv-to-api-data
 Scripts and Spark Tasks to Transform CSV to something easily consumable by a mobile/web client
 

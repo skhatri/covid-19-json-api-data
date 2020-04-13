@@ -32,3 +32,7 @@ task("extract", JavaExec::class) {
 tasks.wrapper {
     gradleVersion = "6.2.2"
 }
+
+tasks.build {
+    dependsOn(arrayOf("extract"))
+}
