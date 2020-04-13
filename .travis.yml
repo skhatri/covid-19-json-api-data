@@ -8,9 +8,6 @@ script:
   - ./gradlew clean extract
   - ./upload.sh
 
-after_success:
-  - ./upload.sh
-
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
 
