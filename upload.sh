@@ -1,5 +1,7 @@
 #!/bin/bash
 
+pwd
+ls -lhtr
 changes=$(git status -s|wc -l)
 if [[ $changes -ne 0 ]];
 then
