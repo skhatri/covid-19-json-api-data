@@ -1,10 +1,10 @@
 #!/bin/bash
 
+: "${GIT_URL=github.com/skhatri/covid-19-csv-to-api-data.git/}"
 : "${TRAVIS_BUILD_NUMBER=0}"
 : "${TRAVIS_EVENT_TYPE=trigger}"
 : "${GITHUB_TOKEN='invalid'}"
 
-git status
 now=$(date "+%Y-%m-%dT%H:%M:%S%z")
 changes=$(git status -s|wc -l)
 echo "Time: ${now}, changes: ${changes}"
@@ -15,19 +15,19 @@ then
   ec=$(git config user.email|wc -l)
   if [[ $ec -eq 0 ]];
   then
-      git config --global user.email "travis@travis-ci.com"
+      git config user.email "travis@travis-ci.com"
   fi;
 
   nc=$(git config user.name|wc -l)
   if [[ $nc -eq 0 ]];
   then
-    git config --global user.name "Travis CI"
+    git config user.name "Travis CI"
   fi;
 
   git add data
   git add dataset
   git commit -m"dataset update run at ${now} build: #${TRAVIS_BUILD_NUMBER}, trigger_type: ${TRAVIS_EVENT_TYPE}"
-  git remote add gh https://"${GITHUB_TOKEN}"@github.com/skhatri/covid-19-csv-to-api-data.git/
+  git remote add gh https://"${GITHUB_TOKEN}"@"${GIT_URL}"
   tag_msg='{"time": "'"${now}"'", "build_number": '"${TRAVIS_BUILD_NUMBER}"', "trigger_type": "'"${TRAVIS_EVENT_TYPE}"'", "message": "dataset update"}'
   git tag -a -m"${tag_msg}" build/"${TRAVIS_BUILD_NUMBER}"
   git push gh master --tags
