@@ -81,19 +81,20 @@ class Scenarios {
    */
   private[this] def generateLatestAvailableDateStats(allCounters: Seq[CovidAggregate]): Unit = {
     implicit val epochOrder: Ordering[LocalDate] = Ordering.by(_.toEpochDay)
-    val latestDate = allCounters.head.timeline.keys.map(dateKeys => {
+    val maxDate = allCounters.head.timeline.keys.map(dateKeys => {
       LocalDate.parse(dateKeys, DateTimeFormatter.ofPattern(R.outputDateFormatValue))
-    }).max.format(DateTimeFormatter.ofPattern(R.outputDateFormatValue))
+    }).max
+
+    val dateKey = maxDate.format(DateTimeFormatter.ofPattern(R.outputDateFormatValue))
 
     val latestCounters = allCounters.map(covAgg => {
-      val timeline: Map[String, Int] = covAgg.timeline.getOrElse(latestDate, Map.empty[String, Int])
-      covAgg.copy(timeline = Map(latestDate -> timeline))
+      val timeline: Map[String, Int] = covAgg.timeline.getOrElse(dateKey, Map.empty[String, Int])
+      covAgg.copy(timeline = Map(dateKey -> timeline))
     })
     saveFile("data/latest_counters.json", objectMapper.writeValueAsString(latestCounters))
 
-
     val totals = allCounters.foldLeft(Map.empty[String, Int])((agg, covAgg) => {
-      val timeline: Map[String, Int] = covAgg.timeline.getOrElse(latestDate, Map.empty[String, Int])
+      val timeline: Map[String, Int] = covAgg.timeline.getOrElse(dateKey, Map.empty[String, Int])
       val currRecover = timeline.getOrElse("recovered", 0)
       val currConfirmed = timeline.getOrElse("confirmed", 0)
       val currDeaths = timeline.getOrElse("deaths", 0)
@@ -103,7 +104,8 @@ class Scenarios {
         "deaths" -> agg.get("deaths").map(tot => currDeaths + tot).getOrElse(currDeaths)
       )
     })
-    saveFile("data/totals.json", objectMapper.writeValueAsString(totals))
+    val summary = Map("counts" -> totals, "date" -> maxDate.format(DateTimeFormatter.ISO_DATE))
+    saveFile("data/totals.json", objectMapper.writeValueAsString(summary))
 
   }
 
