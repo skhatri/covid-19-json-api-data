@@ -90,6 +90,21 @@ class Scenarios {
       covAgg.copy(timeline = Map(latestDate -> timeline))
     })
     saveFile("data/latest_counters.json", objectMapper.writeValueAsString(latestCounters))
+
+
+    val totals = allCounters.foldLeft(Map.empty[String, Int])((agg, covAgg) => {
+      val timeline: Map[String, Int] = covAgg.timeline.getOrElse(latestDate, Map.empty[String, Int])
+      val currRecover = timeline.getOrElse("recovered", 0)
+      val currConfirmed = timeline.getOrElse("confirmed", 0)
+      val currDeaths = timeline.getOrElse("deaths", 0)
+      Map(
+        "recovered" -> agg.get("recovered").map(tot => currRecover + tot).getOrElse(currRecover),
+        "confirmed" -> agg.get("confirmed").map(tot => currConfirmed + tot).getOrElse(currConfirmed),
+        "deaths" -> agg.get("deaths").map(tot => currDeaths + tot).getOrElse(currDeaths)
+      )
+    })
+    saveFile("data/totals.json", objectMapper.writeValueAsString(totals))
+
   }
 
 
@@ -110,6 +125,11 @@ class Scenarios {
         saveFile(s"data/by-date/$dateKey.json", objectMapper.writeValueAsString(tuple._2))
       })
   }
+
+  private[this] def generateTotals(allCounters: Seq[CovidAggregate]): Unit = {
+
+  }
+
 
   /**
    * Generate all data files

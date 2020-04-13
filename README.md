@@ -22,6 +22,13 @@ bash ./download.sh
 ### Api
 The files may be returned as text/plain.
 
+
+#### World Totals
+Running Total of the cases by status
+
+https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/totals.json
+
+
 #### List of Countries/Provinces
 This can be used as menu item for retrieving dataset by country
 
