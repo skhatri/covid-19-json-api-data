@@ -34,7 +34,11 @@ class Scenarios {
 
 
   //aggregate them all into one
-
+  /**
+   * Output: {"counts": {}, "items": []}
+   * @param unionData
+   * @return
+   */
   private[this] def mergeDatasetCountersByDateHierarchy(unionData: List[CovidItem]): Seq[CovidAggregate] = {
     val allCounters: Seq[CovidAggregate] = unionData.groupBy(cv => (cv.country_region, cv.province_state))
       .mapValues(itemsInCategory => {
@@ -51,7 +55,11 @@ class Scenarios {
         })
         CovidAggregate(first.province_state, first.country_region, first.lat, first.lon, counters)
       }).values.toSeq
-    saveFile("data/all_counters.json", objectMapper.writeValueAsString(allCounters))
+
+    val totals = createTotals(allCounters)
+    val output = Map("counts" -> totals, "items" -> allCounters)
+
+    saveFile("data/all_counters.json", objectMapper.writeValueAsString(output))
     allCounters
   }
 
@@ -59,18 +67,27 @@ class Scenarios {
    * Generates the list of countries to be used as index or menu at ./data/country.json
    * It also produces historical data by country at ./data/by-country/{country_key}.json
    * The attribute key in ./data/country.json is used as {country_key} when retrieving dataset for a country/province
+   *
+   * Output Country Dataset:
+   * {"counts": {}, "items": []}
+   *
+   * Output Country List:
+   * [{ "key": "", "province_state": "", "country_region": "", "_self": ""}]
    */
   private[this] def generateDatasetByCountry(allCounters: Seq[CovidAggregate]): Unit = {
     //by country
     allCounters.foreach(covAgg => {
-      saveFile(s"data/by-country/${covAgg.country_province_key}.json", objectMapper.writeValueAsString(covAgg))
+      val items = Seq(covAgg)
+      val totals = createTotals(items)
+      val output = Map("counts" -> totals, "items" -> items )
+      saveFile(s"data/by-country/${covAgg.country_province_key}.json", objectMapper.writeValueAsString(output))
     })
     //save country names as index
     val countryIndex = allCounters.map(covAgg => {
       Map("key" -> covAgg.country_province_key,
         "province_state" -> covAgg.province_state,
         "country_region" -> covAgg.country_region,
-        "_self" -> s"${baseUrl}/by-country/${covAgg.country_province_key}.json"
+        "_self" -> s"$baseUrl/by-country/${covAgg.country_province_key}.json"
       )
     })
     saveFile("data/country.json", objectMapper.writeValueAsString(countryIndex))
@@ -78,23 +95,43 @@ class Scenarios {
 
   /**
    * Dataset for the latest available date
+   *
+   * Output Latest Counters:
+   *  {counts: {}, items: []
+   * Output Totals:
+   *  {counts: {}, date: ""}
    */
   private[this] def generateLatestAvailableDateStats(allCounters: Seq[CovidAggregate]): Unit = {
-    implicit val epochOrder: Ordering[LocalDate] = Ordering.by(_.toEpochDay)
-    val maxDate = allCounters.head.timeline.keys.map(dateKeys => {
-      LocalDate.parse(dateKeys, DateTimeFormatter.ofPattern(R.outputDateFormatValue))
-    }).max
+    val anyAggregateInstance = allCounters.head
+    val maxDate: LocalDate = findMaxDate(anyAggregateInstance)
 
     val dateKey = maxDate.format(DateTimeFormatter.ofPattern(R.outputDateFormatValue))
 
-    val latestCounters = allCounters.map(covAgg => {
-      val timeline: Map[String, Int] = covAgg.timeline.getOrElse(dateKey, Map.empty[String, Int])
-      covAgg.copy(timeline = Map(dateKey -> timeline))
-    })
-    saveFile("data/latest_counters.json", objectMapper.writeValueAsString(latestCounters))
+    val latestTotals = createTotals(allCounters)
 
-    val totals = allCounters.foldLeft(Map.empty[String, Int])((agg, covAgg) => {
+    val latestCounters: Seq[CovidAggregate] = allCounters.map(covAgg => {
       val timeline: Map[String, Int] = covAgg.timeline.getOrElse(dateKey, Map.empty[String, Int])
+      covAgg.copy(timeline = Map("counts" -> timeline))
+    })
+    val output = Map("counts" -> latestTotals, "items" -> latestCounters)
+
+    saveFile("data/latest_counters.json", objectMapper.writeValueAsString(output))
+
+    val totals: Map[String, Int] = createTotals(allCounters, dateKey)
+    val summary = Map("counts" -> totals, "date" -> maxDate.format(DateTimeFormatter.ISO_DATE))
+    saveFile("data/totals.json", objectMapper.writeValueAsString(summary))
+
+  }
+
+  private[this] def createTotals(allCounters: Seq[CovidAggregate], dateKey: String = ""): Map[String, Int] = {
+    val key = if (dateKey == "") {
+      findMaxDate(allCounters.head).format(DateTimeFormatter.ofPattern(R.outputDateFormatValue))
+    } else {
+      dateKey
+    }
+
+    allCounters.foldLeft(Map.empty[String, Int])((agg, covAgg) => {
+      val timeline: Map[String, Int] = covAgg.timeline.getOrElse(key, Map.empty[String, Int])
       val currRecover = timeline.getOrElse("recovered", 0)
       val currConfirmed = timeline.getOrElse("confirmed", 0)
       val currDeaths = timeline.getOrElse("deaths", 0)
@@ -104,15 +141,21 @@ class Scenarios {
         "deaths" -> agg.get("deaths").map(tot => currDeaths + tot).getOrElse(currDeaths)
       )
     })
-    val summary = Map("counts" -> totals, "date" -> maxDate.format(DateTimeFormatter.ISO_DATE))
-    saveFile("data/totals.json", objectMapper.writeValueAsString(summary))
-
   }
 
+  private[this] def findMaxDate(anyAggregateInstance: CovidAggregate) = {
+    implicit val epochOrder: Ordering[LocalDate] = Ordering.by(_.toEpochDay)
+    val maxDate = anyAggregateInstance.timeline.keys.map(dateKeys => {
+      LocalDate.parse(dateKeys, DateTimeFormatter.ofPattern(R.outputDateFormatValue))
+    }).max
+    maxDate
+  }
 
   /**
    * Generates date-wise dataset
    * Resource available at ./data/by-date/{yyyy-MM-dd}.json
+   * Output:
+   * {counts: {}, items: []}
    */
   private[this] def generateDatasetByDate(allCounters: Seq[CovidAggregate]): Unit = {
     allCounters.flatMap(covAgg => {
@@ -124,14 +167,11 @@ class Scenarios {
       .foreach(tuple => {
         val dateKey = LocalDate.parse(tuple._1, DateTimeFormatter.ofPattern(R.outputDateFormatValue))
           .format(DateTimeFormatter.ISO_DATE)
-        saveFile(s"data/by-date/$dateKey.json", objectMapper.writeValueAsString(tuple._2))
+        val totals = createTotals(tuple._2)
+        val output = Map("counts" -> totals, "items" -> tuple._2)
+        saveFile(s"data/by-date/$dateKey.json", objectMapper.writeValueAsString(output))
       })
   }
-
-  private[this] def generateTotals(allCounters: Seq[CovidAggregate]): Unit = {
-
-  }
-
 
   /**
    * Generate all data files

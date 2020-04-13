@@ -8,6 +8,7 @@ case class CovidAggregate(province_state: String, country_region: String, lat: D
   val country_province_key = s"${this.country_region}$suffix"
     .replace(' ', '_')
     .replaceAllLiterally("*", "")
+
 }
 
 object R {
