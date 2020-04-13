@@ -30,7 +30,7 @@ then
   git remote add gh https://"${GITHUB_TOKEN}"@"${GIT_URL}"
   tag_msg='{"time": "'"${now}"'", "build_number": '"${TRAVIS_BUILD_NUMBER}"', "trigger_type": "'"${TRAVIS_EVENT_TYPE}"'", "message": "dataset update"}'
   git tag -a -m"${tag_msg}" build/"${TRAVIS_BUILD_NUMBER}"
-  git push gh master
+  git push gh build/"${TRAVIS_BUILD_NUMBER}":master
   git push gh --tags
 fi
 
