@@ -146,7 +146,7 @@ class Scenarios {
       val timeline: Map[String, Int] = covAgg.timeline.getOrElse(dateKey, Map.empty[String, Int])
       covAgg.copy(timeline = Map("counts" -> timeline))
     })
-    val output = Map("counts" -> latestTotals, "items" -> latestCounters)
+    val output = Map("counts" -> latestTotals, "date" -> maxDate.format(DateTimeFormatter.ISO_DATE), "items" -> latestCounters)
 
     saveFile("data/latest_counters.json", objectMapper.writeValueAsString(output))
 
