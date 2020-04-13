@@ -34,8 +34,33 @@ class Scenarios {
 
 
   //aggregate them all into one
+  def mergeAggregate(items: Seq[CovidAggregate]) : CovidAggregate = {
+    val first = items.head
+    val template = CovidAggregate(null, first.country_region, first.lat, first.lon, Map.empty[String, Counter], true)
+
+    def mergeCounts(m1:Map[String, Int], m2:Map[String, Int]):Map[String, Int] = {
+      m2.foldLeft(m1)((acc, kv) => {
+        acc.get(kv._1) match {
+          case Some(count) => acc ++ Map(kv._1 -> (count + kv._2))
+          case None => acc ++ Map(kv._1 -> kv._2)
+        }
+      })
+    }
+
+    items.foldLeft(template)((agg, item) => {
+      val runningTimeline = item.timeline.map(kv => {
+        agg.timeline.get(kv._1) match {
+          case Some(existing) => (kv._1, mergeCounts(existing, kv._2))
+          case None => (kv._1, kv._2)
+        }
+      })
+      agg.copy(timeline = runningTimeline)
+    })
+  }
+
   /**
    * Output: {"counts": {}, "items": []}
+   *
    * @param unionData
    * @return
    */
@@ -56,12 +81,18 @@ class Scenarios {
         CovidAggregate(first.province_state, first.country_region, first.lat, first.lon, counters)
       }).values.toSeq
 
-    val totals = createTotals(allCounters)
-    val output = Map("counts" -> totals, "items" -> allCounters)
 
+    val countryRolledUp:Map[String, CovidAggregate] = allCounters.groupBy(_.country_region).filter(_._2.size > 1).mapValues(mergeAggregate)
+    val countryProvincesAgg = allCounters ++ countryRolledUp.values
+
+
+    //totals should exclude province data
+    val totals = createTotals(countryProvincesAgg.filter(_.isCountryLevel))
+    val output = Map("counts" -> totals, "items" -> countryProvincesAgg)
     saveFile("data/all_counters.json", objectMapper.writeValueAsString(output))
-    allCounters
+    countryProvincesAgg
   }
+
 
   /**
    * Generates the list of countries to be used as index or menu at ./data/country.json
@@ -75,19 +106,21 @@ class Scenarios {
    * [{ "key": "", "province_state": "", "country_region": "", "_self": ""}]
    */
   private[this] def generateDatasetByCountry(allCounters: Seq[CovidAggregate]): Unit = {
-    //by country
-    allCounters.foreach(covAgg => {
+    def saveCovidData(covAgg: CovidAggregate ) = {
       val items = Seq(covAgg)
       val totals = createTotals(items)
       val output = Map("counts" -> totals, "items" -> items )
       saveFile(s"data/by-country/${covAgg.country_province_key}.json", objectMapper.writeValueAsString(output))
-    })
+    }
+    //by country
+    allCounters.foreach(saveCovidData)
     //save country names as index
     val countryIndex = allCounters.map(covAgg => {
       Map("key" -> covAgg.country_province_key,
         "province_state" -> covAgg.province_state,
         "country_region" -> covAgg.country_region,
-        "_self" -> s"$baseUrl/by-country/${covAgg.country_province_key}.json"
+        "_self" -> s"$baseUrl/by-country/${covAgg.country_province_key}.json",
+        "has_province" -> covAgg.has_province
       )
     })
     saveFile("data/country.json", objectMapper.writeValueAsString(countryIndex))
@@ -107,7 +140,7 @@ class Scenarios {
 
     val dateKey = maxDate.format(DateTimeFormatter.ofPattern(R.outputDateFormatValue))
 
-    val latestTotals = createTotals(allCounters)
+    val latestTotals = createTotals(allCounters.filter(_.isCountryLevel))
 
     val latestCounters: Seq[CovidAggregate] = allCounters.map(covAgg => {
       val timeline: Map[String, Int] = covAgg.timeline.getOrElse(dateKey, Map.empty[String, Int])
@@ -117,7 +150,7 @@ class Scenarios {
 
     saveFile("data/latest_counters.json", objectMapper.writeValueAsString(output))
 
-    val totals: Map[String, Int] = createTotals(allCounters, dateKey)
+    val totals: Map[String, Int] = createTotals(allCounters.filter(_.isCountryLevel), dateKey)
     val summary = Map("counts" -> totals, "date" -> maxDate.format(DateTimeFormatter.ISO_DATE))
     saveFile("data/totals.json", objectMapper.writeValueAsString(summary))
 
@@ -167,7 +200,7 @@ class Scenarios {
       .foreach(tuple => {
         val dateKey = LocalDate.parse(tuple._1, DateTimeFormatter.ofPattern(R.outputDateFormatValue))
           .format(DateTimeFormatter.ISO_DATE)
-        val totals = createTotals(tuple._2)
+        val totals = createTotals(tuple._2.filter(_.isCountryLevel))
         val output = Map("counts" -> totals, "items" -> tuple._2)
         saveFile(s"data/by-date/$dateKey.json", objectMapper.writeValueAsString(output))
       })
