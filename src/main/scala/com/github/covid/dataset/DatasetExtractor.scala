@@ -80,9 +80,9 @@ object DatasetExtractor extends App {
   val recoveredDataset = loadDataset("dataset/global_recovered.csv").selectExpr("'recovered' as _type", "*")
 
 
-  confirmedDataset.show(1, false)
-  deathDataset.show(1, false)
-  recoveredDataset.show(1, false)
+  confirmedDataset.show(2, true)
+  deathDataset.show(2, true)
+  recoveredDataset.show(2, true)
 
 
   def saveFile(name: String, content: String) = {
@@ -146,7 +146,13 @@ object DatasetExtractor extends App {
     saveFile(s"data/by-country/${covAgg.country_province_key}.json", objectMapper.writeValueAsString(covAgg))
   })
   //save country names as index
-  saveFile("data/country.json", objectMapper.writeValueAsString(allCounters.map(covAgg => covAgg.country_province_key)))
+  val countryIndex = allCounters.map(covAgg => {
+    Map("key" -> covAgg.country_province_key,
+      "province_state" -> covAgg.province_state,
+      "country_region" -> covAgg.country_region
+    )
+  })
+  saveFile("data/country.json", objectMapper.writeValueAsString(countryIndex))
 
 
   implicit val epochOrder: Ordering[LocalDate] = Ordering.by(_.toEpochDay)

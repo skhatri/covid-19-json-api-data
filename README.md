@@ -25,29 +25,27 @@ The files may be returned as text/plain.
 curl https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/country.json
 ```
 #### Confirmed, Recovered, Death Counters
-```
-https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/recovered.json
-https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/confirmed.json
-https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/death.json
-```
 
-#### Latest Available Dataset (1 day data)
-```
+- Confirmed - https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/confirmed.json
+- Recovered - https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/recovered.json
+- Death - https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/death.json
+
+#### Data for the last day
 https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/latest_counters.json
-```
+
 
 #### All available time series Dataset
-```
+
 https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/all_counters.json
-```
 
 #### View for a particular country/province
 Use data returned by "List of Countries/Province" call as key (country_province_key) for this one
-https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/by-country/{country_province_key}
-```
+```https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/by-country/{country_province_key}```
+
 https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/by-country/Australia_New_South_Wales.json
-```
+
+
 #### View for a particular date
-```
+Format is ```https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/by-date/{date}.json```
+
 https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/by-date/2020-04-11.json
-```
