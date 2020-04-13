@@ -24,14 +24,17 @@ then
     git config user.name "Travis CI"
   fi;
 
+  git remote add gh https://"${GITHUB_TOKEN}"@"${GIT_URL}"
+  release_branch="build_${TRAVIS_BUILD_NUMBER}"
+  git checkout -b "${release_branch}"
+
   git add data
   git add dataset
   git commit -m"dataset update run at ${now} build: #${TRAVIS_BUILD_NUMBER}, trigger_type: ${TRAVIS_EVENT_TYPE}"
-  git remote add gh https://"${GITHUB_TOKEN}"@"${GIT_URL}"
-  git branch
+  git push gh "${release_branch}":master
   tag_msg='{"time": "'"${now}"'", "build_number": '"${TRAVIS_BUILD_NUMBER}"', "trigger_type": "'"${TRAVIS_EVENT_TYPE}"'", "message": "dataset update"}'
   git tag -a -m"${tag_msg}" build/"${TRAVIS_BUILD_NUMBER}"
-  git push gh develop:master
+  git push gh --tags
 fi
 
 #debug:
