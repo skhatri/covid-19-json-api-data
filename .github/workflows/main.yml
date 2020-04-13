@@ -6,7 +6,7 @@ name: CI
 # events but only for the master branch
 on:
   push:
-    branches: master
+    branches: [ master ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -19,11 +19,21 @@ jobs:
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
-
-    # Runs a single command using the runners shell
-    - name: Git Sync Branches
+      with:
+        fetch-depth: 0
+      
+    - name: git Actions
+      uses: srt32/git-actions@v0.0.3
+    
+    - name: print path
       run: |
-        git checkout origin/develop -b tmp
-        git merge master
-        git push origin tmp:develop
+        now=$(date "+%Y-%m-%dT%H:%M:%S%z")
+        echo Git Action Time: $now
+        
+    - name: sync develop with master
+      run: |
+        git fetch origin
+        git checkout develop
+        git merge master -m"sync develop with master"
+        git push origin develop
 
