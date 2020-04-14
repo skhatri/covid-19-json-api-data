@@ -25,14 +25,13 @@ then
   fi;
 
   git remote add gh https://"${GITHUB_TOKEN}"@"${GIT_URL}"
-  #release_branch="build_${TRAVIS_BUILD_NUMBER}"
-  #git checkout -b "${release_branch}"
+  release_branch="build_${TRAVIS_BUILD_NUMBER}"
+  git checkout -b "${release_branch}"
 
   git add data
   git add dataset
   git commit -m"skip travis dataset update run at ${now} build: #${TRAVIS_BUILD_NUMBER}, trigger_type: ${TRAVIS_EVENT_TYPE}"
-  #git push gh "${release_branch}":master
-  git push gh master
+  git push gh "${release_branch}":master
   tag_msg='{"time": "'"${now}"'", "build_number": '"${TRAVIS_BUILD_NUMBER}"', "trigger_type": "'"${TRAVIS_EVENT_TYPE}"'", "message": "dataset update"}'
   git tag -a -m"${tag_msg}" build/"${TRAVIS_BUILD_NUMBER}"
   git push gh --tags

@@ -21,7 +21,7 @@ bash ./download.sh
 ```
 
 ### Api
-The files may be returned as text/plain.
+The files may be returned as text/plain. Using a prefix of https://raw.githack.com/ can be one way around it so all files are served with content-type of "application/json"
 
 
 #### World Totals
