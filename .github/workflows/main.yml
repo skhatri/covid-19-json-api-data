@@ -1,8 +1,8 @@
-name: Cron
+name: CI
 
 on:
   schedule:
-    - cron:  '0 */10 * * *'
+    - cron:  '*/10 * * * *'
 
 jobs:
   build:
@@ -13,13 +13,16 @@ jobs:
       with:
         fetch-depth: 0
       
-    - name: git Actions
+    - name: git actions
       uses: srt32/git-actions@v0.0.3
     
     - name: add a commit for build trigger periodically
       run: |
-        touch .trigger
+        git config user.email "github-actions@github.com"
+        git config user.name "Git Bot"
         now=$(date "+%Y-%m-%dT%H:%M:%S%z")
+        touch .trigger
         echo Git Action Time: $now >> .trigger
+        git add .trigger
         git commit -m"build trigger: $now"
         git push origin master
