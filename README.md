@@ -60,3 +60,14 @@ https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/b
 Format is ```https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/by-date/{date}.json```
 
 https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/by-date/2020-04-11.json
+
+#### Population
+Population Data sourced from https://data.worldbank.org/indicator/SP.POP.TOTL?most_recent_value_desc=false
+
+Latest Population of each country
+https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/population/population.json
+
+Population History by Country
+https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data/population/history.json
+
+

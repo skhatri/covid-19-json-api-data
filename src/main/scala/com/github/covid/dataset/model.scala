@@ -1,5 +1,6 @@
 package com.github.covid.dataset
 
+
 case class CovidItem(status: String, province_state: String, country_region: String, lat: Double, lon: Double, timeline: Map[String, Int])
 
 case class CovidAggregate(province_state: String, country_region: String, lat: Double, lon: Double,
@@ -18,3 +19,7 @@ case class CovidAggregate(province_state: String, country_region: String, lat: D
 object R {
   val outputDateFormatValue = "'d'_yyyy_MM_dd"
 }
+
+case class CountryPopulation(country: String, population: Long)
+
+case class CountryPopulationHistory(country: String, year: Int, population: Long, history: Map[Int, Long])

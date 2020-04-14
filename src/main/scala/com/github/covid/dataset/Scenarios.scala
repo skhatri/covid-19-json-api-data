@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
 class Scenarios {
+
+
   type Counter = Map[String, Int]
   val baseUrl = "https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data"
 
@@ -22,8 +24,23 @@ class Scenarios {
     fw.close()
   }
 
-  private[this] def generateDatasetByStatus(save: Boolean = true): List[CovidItem] = {
-    val (confirmedItems, recoveredItems, deathItems) = new DatasetParser().parseDatasets()
+  def generatePopulationDataset(datasetParser: DatasetParser): Unit = {
+    val countryPopulationHistory = datasetParser.parsePopulation()
+    val currentPop: Map[String, Map[String, Long]] = countryPopulationHistory.map(cph => (cph.country, Map(
+      "year" -> cph.year.toLong,
+      "population" -> cph.population
+    ))).toMap
+    saveFile("data/population/population.json", objectMapper.writeValueAsString(currentPop))
+
+    val pairMap: Map[Int, Long] => Seq[Map[String, Long]] = m => m.foldLeft(Seq.empty[Map[String, Long]])((acc, item) => {
+      acc :+ Map("year" -> item._1.toLong, "population" -> item._2)
+    })
+    val history: Map[String, Seq[Map[String, Long]]] = countryPopulationHistory.map(cph => (cph.country, pairMap(cph.history))).toMap
+    saveFile("data/population/history.json", objectMapper.writeValueAsString(history))
+  }
+
+  private[this] def generateDatasetByStatus(datasetParser: DatasetParser, save: Boolean = true): Seq[CovidItem] = {
+    val (confirmedItems, recoveredItems, deathItems) = datasetParser.parseDatasets()
     if (save) {
       saveFile("data/confirmed.json", objectMapper.writeValueAsString(confirmedItems))
       saveFile("data/recovered.json", objectMapper.writeValueAsString(recoveredItems))
@@ -34,15 +51,15 @@ class Scenarios {
 
 
   //aggregate them all into one
-  def mergeAggregate(items: Seq[CovidAggregate]) : CovidAggregate = {
+  def mergeAggregate(items: Seq[CovidAggregate]): CovidAggregate = {
     val first = items.head
     val template = CovidAggregate(null, first.country_region, first.lat, first.lon, Map.empty[String, Counter], true)
 
-    def mergeCounts(m1:Map[String, Int], m2:Map[String, Int]):Map[String, Int] = {
+    def mergeCounts(m1: Map[String, Int], m2: Map[String, Int]): Map[String, Int] = {
       m2.foldLeft(m1)((acc, kv) => {
         acc.get(kv._1) match {
-          case Some(count) => acc ++ Map(kv._1 -> (count + kv._2))
-          case None => acc ++ Map(kv._1 -> kv._2)
+          case Some(count) => acc + (kv._1 -> (count + kv._2))
+          case None => acc + (kv._1 -> kv._2)
         }
       })
     }
@@ -64,7 +81,7 @@ class Scenarios {
    * @param unionData
    * @return
    */
-  private[this] def mergeDatasetCountersByDateHierarchy(unionData: List[CovidItem]): Seq[CovidAggregate] = {
+  private[this] def mergeDatasetCountersByDateHierarchy(unionData: Seq[CovidItem]): Seq[CovidAggregate] = {
     val allCounters: Seq[CovidAggregate] = unionData.groupBy(cv => (cv.country_region, cv.province_state))
       .mapValues(itemsInCategory => {
         assert(itemsInCategory.nonEmpty)
@@ -72,7 +89,7 @@ class Scenarios {
         val counters = itemsInCategory.foldLeft(Map.empty[String, Counter])((ctr, cv) => {
           val dateCounts: Map[String, Map[String, Int]] = cv.timeline.map(kv => {
             ctr.get(kv._1) match {
-              case Some(existing) => (kv._1, existing ++ Map(cv.status -> kv._2))
+              case Some(existing) => (kv._1, existing + (cv.status -> kv._2))
               case None => (kv._1, Map(cv.status -> kv._2))
             }
           })
@@ -82,7 +99,7 @@ class Scenarios {
       }).values.toSeq
 
 
-    val countryRolledUp:Map[String, CovidAggregate] = allCounters.groupBy(_.country_region).filter(_._2.size > 1).mapValues(mergeAggregate)
+    val countryRolledUp: Map[String, CovidAggregate] = allCounters.groupBy(_.country_region).filter(_._2.size > 1).mapValues(mergeAggregate)
     val countryProvincesAgg = allCounters ++ countryRolledUp.values
 
 
@@ -106,10 +123,10 @@ class Scenarios {
    * [{ "key": "", "province_state": "", "country_region": "", "_self": ""}]
    */
   private[this] def generateDatasetByCountry(allCounters: Seq[CovidAggregate]): Unit = {
-    def saveCovidData(covAgg: CovidAggregate ) = {
+    def saveCovidData(covAgg: CovidAggregate) = {
       val items = Seq(covAgg)
       val totals = createTotals(items)
-      val output = Map("counts" -> totals, "items" -> items )
+      val output = Map("counts" -> totals, "items" -> items)
       saveFile(s"data/by-country/${covAgg.country_province_key}.json", objectMapper.writeValueAsString(output))
     }
     //by country
@@ -130,9 +147,9 @@ class Scenarios {
    * Dataset for the latest available date
    *
    * Output Latest Counters:
-   *  {counts: {}, items: []
+   * {counts: {}, items: []
    * Output Totals:
-   *  {counts: {}, date: ""}
+   * {counts: {}, date: ""}
    */
   private[this] def generateLatestAvailableDateStats(allCounters: Seq[CovidAggregate]): Unit = {
     val anyAggregateInstance = allCounters.head
@@ -210,11 +227,18 @@ class Scenarios {
    * Generate all data files
    */
   def execute(): Unit = {
-    val unionData = this.generateDatasetByStatus()
+
+    val datasetParser = new DatasetParser()
+    this.generatePopulationDataset(datasetParser)
+    val unionData = this.generateDatasetByStatus(datasetParser)
+    datasetParser.cleanup()
+
     val mergedAggregate = this.mergeDatasetCountersByDateHierarchy(unionData)
     this.generateDatasetByCountry(mergedAggregate)
     this.generateLatestAvailableDateStats(mergedAggregate)
     this.generateDatasetByDate(mergedAggregate)
+
+
   }
 
 }
