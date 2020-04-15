@@ -24,26 +24,43 @@ case class CountryPopulation(country: String, population: Long)
 
 case class CountryPopulationHistory(country: String, year: Int, population: Long, history: Map[Int, Long])
 
-case class BadgeRequirement(key: String, display_name: String)
+case class BadgeRequirement(key: String, display_name: String, link: String)
 
-case class BadgeData(key: String, display_name: String, confirmed: Int, recovered: Int, deaths: Int) {
+case class CovidBadgeData(key: String, display_name: String, confirmed: Int, recovered: Int, deaths: Int, link: String = "") {
 
-  def totalDeaths(): BadgePayload = BadgePayload(display_name, s"deaths:%20${BadgeData.humanise(deaths)}", "critical")
+  val resourceDataLink = Option(link).map(_.trim).filter(_.nonEmpty).getOrElse(CovidBadgeData.countryDataLink(key))
 
-  def totalConfirmed(): BadgePayload = BadgePayload(display_name, s"confirmed:%20${BadgeData.humanise(confirmed)}", "yellow")
+  def totalDeaths(): String =
+    BadgePayload(display_name, s"deaths: ${CovidBadgeData.humanise(deaths)}", "critical")
+      .badgeText(resourceDataLink)
 
-  def totalRecovered(): BadgePayload = BadgePayload(display_name, s"recovered:%20${BadgeData.humanise(recovered)}", "green")
+  def totalConfirmed(): String = BadgePayload(display_name, s"confirmed: ${CovidBadgeData.humanise(confirmed)}", "yellow")
+    .badgeText(resourceDataLink)
+
+  def totalRecovered(): String = BadgePayload(display_name, s"recovered: ${CovidBadgeData.humanise(recovered)}", "green")
+    .badgeText(resourceDataLink)
+
 }
 
-object BadgeData {
+object CovidBadgeData {
   def humanise(num: Int): String = num match {
     case x: Int if x >= 1000000 => f"${x / 1000000.0}%.1fm"
     case x: Int if x >= 1000 => f"${x / 1000.0}%.1fk"
     case x => s"$x"
   }
-}
 
+  def countryDataLink(key: String) = s"https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/$key.json"
+
+  def badgeUrlLink(key: String, suffix: String) = s"https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/badges/$key-$suffix.json"
+
+}
 
 case class BadgePayload(label: String, message: String, color: String) {
   val schemaVersion: Int = 1
+
+  def badgeText(resourceLink: String): String =
+    s"""[![$label](https://img.shields.io/static/v1?label=$label&message=${message.replaceAllLiterally(" ", "%20")}&color=$color)]($resourceLink)"""
+
+  def badgeText(resourceLink: String, badgeDataLocation: String): String =
+    s"""[![AU](https://img.shields.io/endpoint?url=$badgeDataLocation)]($resourceLink)"""
 }

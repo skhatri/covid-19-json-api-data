@@ -42,11 +42,13 @@ class Scenarios {
 
   def getBadgeRequirements(datasetParser: DatasetParser): Seq[BadgeRequirement] = datasetParser.parseBadgeFile()
 
-  def generateBadges(badgeRequirements: Seq[BadgeRequirement], latestCounters: Seq[CovidAggregate]): Unit = {
-    val counters = latestCounters.flatMap(cv => cv.timeline.get("counts") match {
+  def generateBadges(badgeRequirements: Seq[BadgeRequirement], stats: (Seq[CovidAggregate], Map[String, Int])): Unit = {
+    val latestCounters = stats._1
+    val globalCounters = stats._2
+    val counters: Map[String, Map[String, Int]] = latestCounters.flatMap(cv => cv.timeline.get("counts") match {
       case Some(counterMap) => Some((cv.country_province_key, counterMap))
       case None => None
-    }).toMap
+    }).toMap ++ Map("World" -> globalCounters)
     val badgeList = badgeRequirements.flatMap(br => {
       counters.get(br.key) match {
         case Some(valueMap) => {
@@ -55,7 +57,7 @@ class Scenarios {
             recovered <- valueMap.get("recovered")
             deaths <- valueMap.get("deaths")
           }
-            yield BadgeData(br.key, br.display_name, confirmed, recovered, deaths)
+            yield CovidBadgeData(br.key, br.display_name, confirmed, recovered, deaths, br.link)
         }
         case None => None
       }
@@ -67,9 +69,8 @@ class Scenarios {
     })
     val readme = FileUtils.readFileToString(new File(".README.tmpl"))
     val badgeMessage = badgeList.map(bd => {
-      val confirmed = bd.totalConfirmed()
       s"""
-         |[![${bd.display_name}](https://img.shields.io/static/v1?label=${confirmed.label}&message=${confirmed.message}&color=${confirmed.color})](https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/${bd.key}.json)
+         |${bd.totalConfirmed()} ${bd.totalRecovered()} ${bd.totalDeaths()}
          |""".stripMargin
     }).mkString(" ")
     saveFile("README.md", readme.replaceAllLiterally("{{badges}}", badgeMessage))
@@ -187,7 +188,7 @@ class Scenarios {
    * Output Totals:
    * {counts: {}, date: ""}
    */
-  private[this] def generateLatestAvailableDateStats(allCounters: Seq[CovidAggregate]): Seq[CovidAggregate] = {
+  private[this] def generateLatestAvailableDateStats(allCounters: Seq[CovidAggregate]): (Seq[CovidAggregate], Map[String, Int]) = {
     val anyAggregateInstance = allCounters.head
     val maxDate: LocalDate = findMaxDate(anyAggregateInstance)
 
@@ -209,7 +210,7 @@ class Scenarios {
     val totals: Map[String, Int] = createTotals(allCounters.filter(_.isCountry), dateKey)
     val summary = Map("counts" -> totals, "date" -> maxDate.format(DateTimeFormatter.ISO_DATE))
     saveFile("data/totals.json", objectMapper.writeValueAsString(summary))
-    latestCounters
+    (latestCounters, latestTotals)
   }
 
   private[this] def createTotals(allCounters: Seq[CovidAggregate], dateKey: String = ""): Map[String, Int] = {

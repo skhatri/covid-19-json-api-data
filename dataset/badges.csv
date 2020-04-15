@@ -1,9 +1,10 @@
-key,display_name
-Australia,AU
-Australia_New_South_Wales,NSW
-US,USA
-Italy,Italy
-Spain,Spain
-United Kingdom,UK
-Nepal,Nepal
-Taiwan,Taiwan
+key,display_name,link
+World,World,https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/totals.json
+Australia,AU,
+Australia_New_South_Wales,NSW,
+US,USA,
+Italy,Italy,
+Spain,Spain,
+United Kingdom,UK,
+Nepal,Nepal,
+Taiwan,Taiwan,
