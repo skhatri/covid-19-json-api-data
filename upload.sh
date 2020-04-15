@@ -1,6 +1,6 @@
 #!/bin/bash
 
-: "${GIT_URL=github.com/skhatri/covid-19-csv-to-api-data.git/}"
+: "${GIT_URL=github.com/skhatri/covid-19-json-api-data.git/}"
 : "${TRAVIS_BUILD_NUMBER=0}"
 : "${TRAVIS_EVENT_TYPE=trigger}"
 : "${GITHUB_TOKEN='invalid'}"
