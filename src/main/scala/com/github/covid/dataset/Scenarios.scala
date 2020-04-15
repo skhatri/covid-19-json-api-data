@@ -1,17 +1,18 @@
 package com.github.covid.dataset
 
-import java.io.FileWriter
+import java.io.{File, FileWriter}
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import org.apache.commons.io.FileUtils
 
 class Scenarios {
 
 
   type Counter = Map[String, Int]
-  val baseUrl = "https://raw.githubusercontent.com/skhatri/covid-19-csv-to-api-data/master/data"
+  val baseUrl = "https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data"
 
   val objectMapper = new ObjectMapper()
   val scalaModule = new DefaultScalaModule()
@@ -37,6 +38,41 @@ class Scenarios {
     })
     val history: Map[String, Seq[Map[String, Long]]] = countryPopulationHistory.map(cph => (cph.country, pairMap(cph.history))).toMap
     saveFile("data/population/history.json", objectMapper.writeValueAsString(history))
+  }
+
+  def getBadgeRequirements(datasetParser: DatasetParser): Seq[BadgeRequirement] = datasetParser.parseBadgeFile()
+
+  def generateBadges(badgeRequirements: Seq[BadgeRequirement], latestCounters: Seq[CovidAggregate]): Unit = {
+    val counters = latestCounters.flatMap(cv => cv.timeline.get("counts") match {
+      case Some(counterMap) => Some((cv.country_province_key, counterMap))
+      case None => None
+    }).toMap
+    val badgeList = badgeRequirements.flatMap(br => {
+      counters.get(br.key) match {
+        case Some(valueMap) => {
+          for {
+            confirmed <- valueMap.get("confirmed")
+            recovered <- valueMap.get("recovered")
+            deaths <- valueMap.get("deaths")
+          }
+            yield BadgeData(br.key, br.display_name, confirmed, recovered, deaths)
+        }
+        case None => None
+      }
+    })
+    badgeList.foreach(bd => {
+      saveFile(s"data/badges/${bd.key}-confirmed.json", objectMapper.writeValueAsString(bd.totalConfirmed()))
+      saveFile(s"data/badges/${bd.key}-recovered.json", objectMapper.writeValueAsString(bd.totalRecovered()))
+      saveFile(s"data/badges/${bd.key}-deaths.json", objectMapper.writeValueAsString(bd.totalDeaths()))
+    })
+    val readme = FileUtils.readFileToString(new File(".README.tmpl"))
+    val badgeMessage = badgeList.map(bd => {
+      val confirmed = bd.totalConfirmed()
+      s"""
+         |[![${bd.display_name}](https://img.shields.io/static/v1?label=${confirmed.label}&message=${confirmed.message}&color=${confirmed.color})](https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/${bd.key}.json)
+         |""".stripMargin
+    }).mkString(" ")
+    saveFile("README.md", readme.replaceAllLiterally("{{badges}}", badgeMessage))
   }
 
   private[this] def generateDatasetByStatus(datasetParser: DatasetParser, save: Boolean = true): Seq[CovidItem] = {
@@ -104,7 +140,7 @@ class Scenarios {
 
 
     //totals should exclude province data
-    val totals = createTotals(countryProvincesAgg.filter(_.isCountryLevel))
+    val totals = createTotals(countryProvincesAgg.filter(_.isCountry))
     val output = Map("counts" -> totals, "items" -> countryProvincesAgg)
     saveFile("data/all_counters.json", objectMapper.writeValueAsString(output))
     countryProvincesAgg
@@ -151,26 +187,29 @@ class Scenarios {
    * Output Totals:
    * {counts: {}, date: ""}
    */
-  private[this] def generateLatestAvailableDateStats(allCounters: Seq[CovidAggregate]): Unit = {
+  private[this] def generateLatestAvailableDateStats(allCounters: Seq[CovidAggregate]): Seq[CovidAggregate] = {
     val anyAggregateInstance = allCounters.head
     val maxDate: LocalDate = findMaxDate(anyAggregateInstance)
 
     val dateKey = maxDate.format(DateTimeFormatter.ofPattern(R.outputDateFormatValue))
 
-    val latestTotals = createTotals(allCounters.filter(_.isCountryLevel))
+    val latestTotals = createTotals(allCounters.filter(_.isCountry))
 
     val latestCounters: Seq[CovidAggregate] = allCounters.map(covAgg => {
       val timeline: Map[String, Int] = covAgg.timeline.getOrElse(dateKey, Map.empty[String, Int])
       covAgg.copy(timeline = Map("counts" -> timeline))
     })
-    val output = Map("counts" -> latestTotals, "date" -> maxDate.format(DateTimeFormatter.ISO_DATE), "items" -> latestCounters)
-
+    val output = Map("counts" -> latestTotals, "date" -> maxDate.format(DateTimeFormatter.ISO_DATE), "items" -> latestCounters.filter(_.isCountry))
     saveFile("data/latest_counters.json", objectMapper.writeValueAsString(output))
 
-    val totals: Map[String, Int] = createTotals(allCounters.filter(_.isCountryLevel), dateKey)
+    val outputWithProvince = Map("counts" -> latestTotals, "date" -> maxDate.format(DateTimeFormatter.ISO_DATE), "items" -> latestCounters)
+    saveFile("data/latest_counters_with_province.json", objectMapper.writeValueAsString(outputWithProvince))
+
+
+    val totals: Map[String, Int] = createTotals(allCounters.filter(_.isCountry), dateKey)
     val summary = Map("counts" -> totals, "date" -> maxDate.format(DateTimeFormatter.ISO_DATE))
     saveFile("data/totals.json", objectMapper.writeValueAsString(summary))
-
+    latestCounters
   }
 
   private[this] def createTotals(allCounters: Seq[CovidAggregate], dateKey: String = ""): Map[String, Int] = {
@@ -217,7 +256,7 @@ class Scenarios {
       .foreach(tuple => {
         val dateKey = LocalDate.parse(tuple._1, DateTimeFormatter.ofPattern(R.outputDateFormatValue))
           .format(DateTimeFormatter.ISO_DATE)
-        val totals = createTotals(tuple._2.filter(_.isCountryLevel))
+        val totals = createTotals(tuple._2.filter(_.isCountry))
         val output = Map("counts" -> totals, "items" -> tuple._2)
         saveFile(s"data/by-date/$dateKey.json", objectMapper.writeValueAsString(output))
       })
@@ -231,14 +270,14 @@ class Scenarios {
     val datasetParser = new DatasetParser()
     this.generatePopulationDataset(datasetParser)
     val unionData = this.generateDatasetByStatus(datasetParser)
+    val badgeRequirements = this.getBadgeRequirements(datasetParser)
     datasetParser.cleanup()
 
-    val mergedAggregate = this.mergeDatasetCountersByDateHierarchy(unionData)
+    val mergedAggregate: Seq[CovidAggregate] = this.mergeDatasetCountersByDateHierarchy(unionData)
     this.generateDatasetByCountry(mergedAggregate)
-    this.generateLatestAvailableDateStats(mergedAggregate)
+    val latestCounters = this.generateLatestAvailableDateStats(mergedAggregate)
     this.generateDatasetByDate(mergedAggregate)
-
-
+    this.generateBadges(badgeRequirements, latestCounters)
   }
 
 }

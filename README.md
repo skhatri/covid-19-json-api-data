@@ -3,6 +3,24 @@
 # covid-19-json-api-data
 COVID-19 Dataset with Api Endpoints. Spark/Scala Transformation Tasks to convert to JSON Api payloads for mobile/web client.
 
+### Quicklinks
+
+
+[![AU](https://img.shields.io/static/v1?label=AU&message=confirmed:%206.4k&color=blue)](https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/Australia.json)
+ 
+[![NSW](https://img.shields.io/static/v1?label=NSW&message=confirmed:%202.9k&color=blue)](https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/Australia_New_South_Wales.json)
+ 
+[![USA](https://img.shields.io/static/v1?label=USA&message=confirmed:%20580.6k&color=blue)](https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/US.json)
+ 
+[![Italy](https://img.shields.io/static/v1?label=Italy&message=confirmed:%20159.5k&color=blue)](https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/Italy.json)
+ 
+[![Spain](https://img.shields.io/static/v1?label=Spain&message=confirmed:%20170.1k&color=blue)](https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/Spain.json)
+ 
+[![Nepal](https://img.shields.io/static/v1?label=Nepal&message=confirmed:%2014&color=blue)](https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/Nepal.json)
+ 
+[![Taiwan](https://img.shields.io/static/v1?label=Taiwan&message=confirmed:%20393&color=blue)](https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/Taiwan.json)
+
+
 ### Source
 https://github.com/CSSEGISandData/COVID-19
 ```
@@ -42,8 +60,10 @@ https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/cou
 - Death - https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/death.json
 
 #### Data for the last day
+Api to find the current standings
 https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/latest_counters.json
-
+Also includes Province (for Australia, Canada, China)
+https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/latest_counters_with_province.json
 
 #### All available time series Dataset
 
@@ -54,7 +74,11 @@ Use data returned by "List of Countries/Province" call as key (country_province_
 ```https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/{country_province_key}```
 
 https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/Australia_New_South_Wales.json
-
+https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/Australia.json
+https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/US.json
+https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/Italy.json
+https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/Spain.json
+https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-country/United_Kingdom.json
 
 #### View for a particular date
 Format is ```https://raw.githubusercontent.com/skhatri/covid-19-json-api-data/master/data/by-date/{date}.json```

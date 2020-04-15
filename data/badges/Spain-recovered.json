@@ -1,1 +1,6 @@
-{"label":"Spain","message":"recovered: 64.7k","color":"green","schemaVersion":1}
+{
+  "label": "Spain",
+  "message": "recovered:%2064.7k",
+  "color": "green",
+  "schemaVersion": 1
+}

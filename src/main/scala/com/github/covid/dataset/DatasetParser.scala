@@ -115,6 +115,11 @@ class DatasetParser {
     }).toSeq
   }
 
+  def parseBadgeFile():Seq[BadgeRequirement] = {
+    import sparkSession.implicits._
+    loadDataset("dataset/badges.csv").as[BadgeRequirement].collect().toSeq
+  }
+
   def cleanup(): Unit = {
     sparkSession.close()
   }
