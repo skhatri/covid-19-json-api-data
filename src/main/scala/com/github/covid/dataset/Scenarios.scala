@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import org.apache.commons.io.FileUtils
 
+import scala.util.control.NoStackTrace
+
 class Scenarios {
 
 
@@ -135,8 +137,13 @@ class Scenarios {
         CovidAggregate(first.province_state, first.country_region, first.lat, first.lon, counters)
       }).values.toSeq
 
+    val countriesWithIndependentTerritories = Seq("United Kingdom", "France", "Netherlands", "Canada", "Denmark")
+    val countryRolledUp: Map[String, CovidAggregate] = allCounters.filterNot(cov => countriesWithIndependentTerritories.exists(cn => cn == cov.country_region)).groupBy(_.country_region).filter(_._2.size > 1).mapValues(mergeAggregate)
+    val dups = allCounters.filter(_.isCountry).map(_.country_region).intersect(countryRolledUp.values.map(_.country_region).toSeq)
+      if (dups.nonEmpty) {
+        throw new RuntimeException(s"found duplicate entries in roll ups. Double counting is bad. ${dups.mkString("[", ", ", "]")}") with NoStackTrace
+      }
 
-    val countryRolledUp: Map[String, CovidAggregate] = allCounters.groupBy(_.country_region).filter(_._2.size > 1).mapValues(mergeAggregate)
     val countryProvincesAgg = allCounters ++ countryRolledUp.values
 
 
@@ -162,7 +169,7 @@ class Scenarios {
   private[this] def generateDatasetByCountry(allCounters: Seq[CovidAggregate]): Unit = {
     def saveCovidData(covAgg: CovidAggregate) = {
       val items = Seq(covAgg)
-      val totals = createTotals(items)
+      val totals = createTotals(items, "")
       val output = Map("counts" -> totals, "items" -> items)
       saveFile(s"data/by-country/${covAgg.country_province_key}.json", objectMapper.writeValueAsString(output))
     }
@@ -213,24 +220,35 @@ class Scenarios {
     (latestCounters, latestTotals)
   }
 
-  private[this] def createTotals(allCounters: Seq[CovidAggregate], dateKey: String = ""): Map[String, Int] = {
+  private[this] def createTotals(allCounters: Seq[CovidAggregate], dateKey: String = "", intent:String=""): Map[String, Int] = {
+
     val key = if (dateKey == "") {
       findMaxDate(allCounters.head).format(DateTimeFormatter.ofPattern(R.outputDateFormatValue))
     } else {
       dateKey
     }
 
-    allCounters.foldLeft(Map.empty[String, Int])((agg, covAgg) => {
+    var total = 0
+   var keys = Seq[(String,Int)]()
+   val totals = allCounters.foldLeft(Map.empty[String, Int])((agg, covAgg) => {
       val timeline: Map[String, Int] = covAgg.timeline.getOrElse(key, Map.empty[String, Int])
       val currRecover = timeline.getOrElse("recovered", 0)
       val currConfirmed = timeline.getOrElse("confirmed", 0)
       val currDeaths = timeline.getOrElse("deaths", 0)
+
+     total = total + currDeaths
+      keys = keys :+ (covAgg.country_province_key + "_" + covAgg.country_region + " " + covAgg.province_state, currDeaths)
       Map(
         "recovered" -> agg.get("recovered").map(tot => currRecover + tot).getOrElse(currRecover),
         "confirmed" -> agg.get("confirmed").map(tot => currConfirmed + tot).getOrElse(currConfirmed),
         "deaths" -> agg.get("deaths").map(tot => currDeaths + tot).getOrElse(currDeaths)
       )
     })
+    if(intent == "debug") {
+      println(intent, "total", total)
+      println(keys.sortBy(-_._2).map(kv => kv._1+","+kv._2).mkString("\n"))
+    }
+    totals
   }
 
   private[this] def findMaxDate(anyAggregateInstance: CovidAggregate) = {
